@@ -54,6 +54,18 @@ void Game::Run()
         {
             if (event.type == SDL_QUIT)
                 quit = true;
+            else if (event.type == SDL_KEYDOWN)
+            {
+                switch (event.key.keysym.sym)
+                {
+                case SDLK_r:
+                    Restart();
+                    break;
+                case SDLK_q:
+                    quit = true;
+                    break;
+                }
+            }
             else if (event.type == SDL_MOUSEBUTTONUP && !board->IsGameOver(NUM_MINES))
             {
                 // get mouse coordinates, ensure valid click
@@ -78,6 +90,7 @@ void Game::Run()
         SDL_RenderClear(renderer);
 
         board->Render(renderer);
+        RenderOptionsText();
         if (board->IsGameOver(NUM_MINES))
             RenderResultText();
         else
@@ -92,10 +105,61 @@ void Game::Run()
     Close();
 }
 
+void Game::Restart()
+{
+    start_time = SDL_GetTicks64();
+    board->Init();
+}
+
+void Game::RenderOptionsText()
+{
+    stringstream restart_text, quit_text;
+
+    restart_text << "R: Restart";
+    restart_display.LoadFromRenderedText(renderer, font, restart_text.str(), COLOR_WHITE);
+    restart_display.Render(renderer, 10, 10);
+
+    quit_text << "Q: Quit";
+    quit_display.LoadFromRenderedText(renderer, font, quit_text.str(), COLOR_WHITE);
+    quit_display.Render(renderer, 480, 10);
+}
+
+void Game::RenderGameText()
+{
+    stringstream flag_text, time_text;
+
+    flag_text << "Flags Used: " << NUM_MINES - board->GetNumberFlaggedTiles();
+    flag_display.LoadFromRenderedText(renderer, font, flag_text.str(), COLOR_WHITE);
+    time_text << "Time: " << (SDL_GetTicks64() - start_time) / 1000;
+    time_display.LoadFromRenderedText(renderer, font, time_text.str(), COLOR_WHITE);
+
+    flag_display.Render(renderer, 100, 50);
+    time_display.Render(renderer, 400, 50);
+}
+
+void Game::RenderResultText()
+{
+    stringstream result_text, time_text;
+    bool player_won = board->DidPlayerWin(NUM_MINES);
+
+    result_text << (player_won ? "You Win!" : "You Lose!");
+    result_display.LoadFromRenderedText(renderer, font, result_text.str(), COLOR_WHITE);
+    result_display.Render(renderer, 225, 40);
+
+    if (player_won)
+    {
+        time_text << "Time: " << finish_time / 1000;
+        time_display.LoadFromRenderedText(renderer, font, time_text.str(), COLOR_WHITE);
+        time_display.Render(renderer, 230, 70);
+    }
+}
+
 void Game::Close()
 {
     free(board);
 
+    restart_display.Free();
+    quit_display.Free();
     flag_display.Free();
     time_display.Free();
     result_display.Free();
@@ -111,30 +175,4 @@ void Game::Close()
     TTF_Quit();
     IMG_Quit();
     SDL_Quit();
-}
-
-void Game::RenderGameText()
-{
-    stringstream flag_text, time_text;
-
-    flag_text << "Flags Used: " << NUM_MINES - board->GetNumberFlaggedTiles();
-    flag_display.LoadFromRenderedText(renderer, font, flag_text.str(), SDL_Color{255, 255, 255});
-    time_text << "Time: " << (SDL_GetTicks64() - start_time) / 1000;
-    time_display.LoadFromRenderedText(renderer, font, time_text.str(), SDL_Color{255, 255, 255});
-
-    flag_display.Render(renderer, 100, 50);
-    time_display.Render(renderer, 400, 50);
-}
-
-void Game::RenderResultText()
-{
-    stringstream result_text, time_text;
-
-    result_text << (board->DidPlayerWin(NUM_MINES) ? "You Win!" : "You Lose!");
-    result_display.LoadFromRenderedText(renderer, font, result_text.str(), SDL_Color{255, 255, 255});
-    time_text << "Time: " << finish_time / 1000;
-    time_display.LoadFromRenderedText(renderer, font, time_text.str(), SDL_Color{255, 255, 255});
-
-    result_display.Render(renderer, 225, 20);
-    time_display.Render(renderer, 230, 50);
 }

@@ -1,12 +1,22 @@
 #include "board.hpp"
 #include <iostream>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 using namespace std;
 
 Board::Board(int mines) : m_mines(mines)
 {
-    int mines_left = mines;
+    Init();
+}
+
+void Board::Init()
+{
+    memset(m_grid, 0, (ROWS * COLS) * sizeof(int));
+    if (!m_tiles.empty())
+        m_tiles.clear();
+
+    int mines_left = m_mines;
     int row, col;
 
     // generate mine tiles at random positions
@@ -22,7 +32,7 @@ Board::Board(int mines) : m_mines(mines)
         }
 
         m_grid[row][col] = 9;
-        m_tiles[row][col] = Tile(row, col, Type::Mine);
+        m_tiles.push_back(Tile(row, col, Type::Mine));
 
         if (row - 1 >= 0 && col - 1 >= 0 && m_grid[row - 1][col - 1] != 9)
             m_grid[row - 1][col - 1]++;
@@ -52,7 +62,7 @@ Board::Board(int mines) : m_mines(mines)
             {
                 Tile tile(row, col, Type::Grass);
                 tile.SetAdjacentMines(m_grid[row][col]);
-                m_tiles[row][col] = tile;
+                m_tiles.push_back(tile);
             }
         }
     }
@@ -60,7 +70,7 @@ Board::Board(int mines) : m_mines(mines)
 
 void Board::ChangeState(State state, int mouse_x, int mouse_y)
 {
-    Tile& tile = GetTile(mouse_x, mouse_y);
+    Tile &tile = GetTile(mouse_x, mouse_y);
     tile.ChangeState(state);
 }
 
@@ -72,7 +82,7 @@ int Board::GetNumberFlaggedTiles()
     {
         for (int col = 0; col < COLS; col++)
         {
-            Tile tile = m_tiles[row][col];
+            Tile tile = GetTile(row, col, false);
             if (tile.GetState() == State::Flagged)
                 num_flagged++;
         }
@@ -83,13 +93,8 @@ int Board::GetNumberFlaggedTiles()
 
 void Board::Render(SDL_Renderer *renderer)
 {
-    for (int row = 0; row < ROWS; row++)
-    {
-        for (int col = 0; col < COLS; col++)
-        {
-            m_tiles[row][col].Render(renderer);
-        }
-    }
+    for (Tile &tile : m_tiles)
+        tile.Render(renderer);
 }
 
 bool Board::IsGameOver(int num_mines)
@@ -102,12 +107,25 @@ bool Board::DidPlayerWin(int num_mines)
     return (ROWS * COLS) - GetUncoveredGrassTiles() == num_mines;
 }
 
-Tile& Board::GetTile(int x, int y)
+Tile &Board::GetTile(int x, int y, bool mouse_coords)
 {
-    int row = x / Tile::SIZE;
-    int col = (y - (Tile::SIZE * 2)) / Tile::SIZE;
+    int row, col;
+    if (mouse_coords)
+    {
+        row = x / Tile::SIZE;
+        col = (y - (Tile::SIZE * 2)) / Tile::SIZE;
+    }
+    else
+    {
+        row = x;
+        col = y;
+    }
 
-    return m_tiles[row][col];
+    for (Tile &tile : m_tiles)
+    {
+        if (tile.GetRow() == row && tile.GetCol() == col)
+            return tile;
+    }
 }
 
 int Board::GetUncoveredGrassTiles()
@@ -118,7 +136,7 @@ int Board::GetUncoveredGrassTiles()
     {
         for (int col = 0; col < COLS; col++)
         {
-            Tile tile = m_tiles[row][col];
+            Tile &tile = GetTile(row, col, false);
             if (tile.GetState() == State::Uncovered)
             {
                 if (tile.GetType() == Type::Mine)

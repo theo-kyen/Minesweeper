@@ -8,6 +8,8 @@ class Board
 public:
     Board(int mines);
 
+    // initializes the board
+    void Init();
     // changes the state of the tile at the given mouse coordinates
     void ChangeState(State state, int mouse_x, int mouse_y);
     // returns the number of flagged tiles
@@ -25,10 +27,11 @@ private:
 
     int m_mines; // number of mines in the game
     int m_grid[ROWS][COLS];
-    Tile m_tiles[ROWS][COLS];
+    std::vector<Tile> m_tiles;
 
     // returns the tile at the given mouse coordinates
-    Tile &GetTile(int x, int y);
+    Tile &GetTile(int x, int y, bool mouse_coords = true);
     // returns the number of uncovered grass tiles
+    // or -1 if a mine is uncovered
     int GetUncoveredGrassTiles();
 };
